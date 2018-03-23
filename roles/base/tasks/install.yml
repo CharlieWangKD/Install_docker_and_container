@@ -1,0 +1,53 @@
+- name: Check if docker is installed
+  command: "docker -v"
+  register: is_docker_installed
+  failed_when: is_docker_installed.rc < 0
+  changed_when: false
+
+- name: Install Docker CE
+  block:
+    - name: Check if the signing key for docker package repository exists
+      raw: "apt-key list | grep docker"
+      register: exist_docker_key
+      failed_when: exist_docker_key.rc < 0
+      changed_when: false
+
+    - name: Install packages to allow apt to use a repository over HTTPS
+      apt:
+        name: "{{item}}"
+        update_cache: yes
+        state: latest
+      with_items:
+        - apt-transport-https
+        - ca-certificates
+        - software-properties-common
+      when: exist_docker_key.rc > 0
+
+    - name: Add Docker’s official GPG key
+      apt_key:
+        id: 0EBFCD88
+        url: https://mirrors.ustc.edu.cn/docker-ce/linux/ubuntu/gpg
+        state: present
+      when: exist_docker_key.rc > 0
+
+    - name: Check if the docker repository is in the source list
+      raw: "grep docker /etc/apt/sources.list /etc/apt/sources.list.d/*"
+      register: exist_docker_repo
+      failed_when: exist_docker_repo.rc < 0
+      changed_when: false
+
+    - name: Add the docker package repositry into source list
+      apt_repository:
+        repo: "deb [arch=amd64] https://mirrors.ustc.edu.cn/docker-ce/linux/ubuntu/ {{ansible_lsb.codename}} stable"
+        state: present
+      when: exist_docker_repo.rc > 0
+
+    - name: Install Docker CE
+      apt:
+        name: "{{item}}"
+        update_cache: yes
+        state: latest
+      with_items:
+        - docker-ce
+        - docker-compose
+  when: is_docker_installed.rc > 0

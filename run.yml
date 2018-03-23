@@ -1,0 +1,43 @@
+---
+- name: Install docker and Container
+  hosts: all
+  become: true
+  vars_files:
+    - configs/all.yml
+  pre_tasks:
+    - name: Updates the package lists and install ansible reqiured packages
+      block:
+        - name: Install the packages that is required by ansible
+          apt:
+            name: "{{ item }}"
+            state: latest
+            update_cache: yes
+          with_items: "{{ansible.requirements}}"
+
+      rescue:
+        - name: Error occours during installing packages. Try to remove the lock file of apt
+          file:
+            path: "{{ item }}"
+            state: absent
+          with_items:
+            - /var/cache/apt/archives/lock
+            - /var/lib/dpkg/lock
+            - /var/lib/apt/lists/lock
+
+        - name: Try to reconfigure the dpkg configuration
+          command: dpkg --configure -a
+
+        - name: Run "apt-get update" again after remove the lock
+          apt:
+            update_cache: yes
+          ignore_errors: yes
+
+        - name: Install the packages that is required by ansible after fix the dpkg problem
+          apt:
+            name: "{{ item }}"
+            state: latest
+          with_items: "{{ansible.requirements}}"
+      tags:
+        - pre-tasks
+  roles:
+    - base

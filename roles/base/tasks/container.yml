@@ -1,0 +1,14 @@
+- name: Install Docker containers
+  block:
+    - name: Install elasticsearch container
+      docker_container:
+        name: elasticsearch
+        image: elasticsearch
+        restart: true
+        restart_policy: always
+        ports:
+          - "9200:9200"
+        env:
+          discovery.type: single-node
+      tags:
+        - elasticsearch

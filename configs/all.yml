@@ -1,0 +1,6 @@
+---
+ansible:
+  requirements:
+    - "python-pexpect"
+    - "python-mysqldb"
+    - "python-openssl"
